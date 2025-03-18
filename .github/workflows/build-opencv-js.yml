@@ -1,0 +1,43 @@
+name: Build OpenCV.js
+
+on: 
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout OpenCV
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y cmake python3 git
+
+      - name: Install Emscripten
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git
+          cd emsdk
+          ./emsdk install latest
+          ./emsdk activate latest
+          echo "source $(pwd)/emsdk_env.sh" >> $GITHUB_ENV
+          cd ..
+
+      - name: Build OpenCV.js
+        run: |
+          git clone https://github.com/opencv/opencv_contrib.git
+          mkdir build_js
+          cd build_js
+          source $GITHUB_ENV
+          emcmake cmake -D OPENCV_JS=ON -D OPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules ..
+          emmake make -j4
+
+      - name: Upload OpenCV.js Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: opencv-js
+          path: build_js/bin/*.js
